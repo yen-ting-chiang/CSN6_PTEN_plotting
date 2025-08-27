@@ -198,3 +198,35 @@ message("Done. Files saved to: ", normalizePath(out_dir))
 print(plot_SD)
 print(plot_SEM)
 
+
+# ---- 9+) 選擇性：不繪製 CMV / CSN6+PTEN / CSN6 的 sub G1 ----
+omit_subG1_conds <- c("CMV","CSN6+PTEN","CSN6")
+
+# 1) 移除指定 Condition 的 sub G1（同時保留原本因子順序）
+long_df_noSub <- long_df %>%
+  dplyr::filter(!(Stage == "sub G1" & Condition %in% omit_subG1_conds)) %>%
+  dplyr::mutate(
+    Condition = factor(Condition, levels = levels(long_df$Condition)),
+    Stage     = factor(Stage,     levels = levels(long_df$Stage))
+  )
+
+# 2) 重算摘要統計（不補回被移除的組合，故不會繪製）
+summary_df_noSub <- long_df_noSub %>%
+  dplyr::group_by(Condition, Stage) %>%
+  dplyr::summarise(
+    n    = dplyr::n(),
+    mean = mean(Value),
+    sd   = sd(Value),
+    sem  = sd / sqrt(n),
+    .groups = "drop"
+  )
+
+# 3) 繪圖與輸出（檔名加上 omitSubG1_selectedConds 後綴）
+plot_SD_noSub  <- make_grouped_bar(summary_df_noSub, long_df_noSub, err_type = "SD")
+plot_SEM_noSub <- make_grouped_bar(summary_df_noSub, long_df_noSub, err_type = "SEM")
+
+save_all_formats(plot_SD_noSub,  paste0(figure_tag, "_omitSubG1_selectedConds_SD"))
+save_all_formats(plot_SEM_noSub, paste0(figure_tag, "_omitSubG1_selectedConds_SEM"))
+
+print(plot_SD_noSub)
+print(plot_SEM_noSub)
